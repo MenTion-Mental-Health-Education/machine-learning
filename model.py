@@ -1,10 +1,13 @@
 import tensorflow as tf
+import numpy as np
 import pandas as pd
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import load_model
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 import pickle
+import matplotlib.pyplot as plt
 
 df = pd.read_csv('train.txt', delimiter=';', header=None, names=['sentence','emotion'])
 
@@ -44,10 +47,43 @@ model = tf.keras.Sequential([
 model.compile(loss='sparse_categorical_crossentropy',
               optimizer='adam',metrics=['accuracy'])
 
-model.fit(x_train_padded, y_train, epochs=5, 
-          validation_data=(x_test_padded, y_test), verbose=2)
+history = model.fit(x_train_padded, y_train, epochs=5, 
+                    validation_data=(x_test_padded, y_test), verbose=2)
 
+# Menyimpan model
 model.save('my_model.h5')
+
+# Membuat grafik untuk akurasi
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.legend(loc='lower right')
+plt.title('Training and Validation Accuracy')
+
+# Membuat grafik untuk loss
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.legend(loc='upper right')
+plt.title('Training and Validation Loss')
+plt.show()
+
+import json
+
+# Menyimpan word index (vocab) dalam format json
+with open('vocab.json', 'w', encoding='utf-8') as f:
+    json.dump(tokenizer.word_index, f, ensure_ascii=False, indent=4)
+
+# Menyimpan konfigurasi tokenizer dalam format json
+tokenizer_json = tokenizer.to_json()
+with open('tokenizer_config.json', 'w', encoding='utf-8') as f:
+    f.write(json.dumps(json.loads(tokenizer_json), ensure_ascii=False))
+
+# Menyimpan tokenizer dalam format json
+with open('tokenizer.json', 'w', encoding='utf-8') as f:
+    f.write(tokenizer.to_json())
+
 
 # Menyimpan tokenizer
 with open('tokenizer.pickle', 'wb') as handle:
@@ -57,9 +93,6 @@ with open('tokenizer.pickle', 'wb') as handle:
 with open('label_encoder.pickle', 'wb') as le:
     pickle.dump(encoder, le, protocol=pickle.HIGHEST_PROTOCOL)
 
-import numpy as np
-from tensorflow.keras.models import load_model
-from sklearn.preprocessing import LabelEncoder
 
 # Memuat model dan tokenizer
 model = load_model('my_model.h5')
